@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
@@ -14,6 +15,7 @@ namespace FanZProxyTool
         static void Main(string[] args)
         {
             Directory.CreateDirectory("Export");
+            Directory.CreateDirectory(Path.Combine("Export", "Images"));
             string stylecss = Path.Combine("Export", "style.css");
             if (!File.Exists(stylecss))
                 File.Copy("style.css", stylecss);
@@ -54,12 +56,14 @@ namespace FanZProxyTool
 
         private static string CopyFile(string gameid, string image_id, string name)
         {
+            name = CleanInput(name);
+            string searchPattern = $"{image_id}_{name}.*";
             var imagedir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "OCTGN", "ImageDatabase", gameid, "Sets");
-            var search = Directory.GetFiles("Export", $"{image_id}.*");
+            var search = Directory.GetFiles("Export", searchPattern, SearchOption.AllDirectories);
             string found = search.SingleOrDefault();
             if (found != null)
             {
-                return Path.GetFileName(found);
+                return $"Images/{Path.GetFileName(found)}";
             }
             search = Directory.GetFiles(imagedir, $"{image_id}.*", SearchOption.AllDirectories);
             try
@@ -72,21 +76,38 @@ namespace FanZProxyTool
             }
             if (found != null)
             {
-                string destFileName = Path.Combine("Export", image_id + Path.GetExtension(found));
+                string finalname = $"{image_id}_{name}" + Path.GetExtension(found);
+                string destFileName = Path.Combine("Export", "Images", finalname);
                 using (var bitmap = Image.FromFile(found))
                 {
                     if (bitmap.Width > bitmap.Height)
                     {
                         bitmap.RotateFlip(RotateFlipType.Rotate90FlipNone);
                         bitmap.Save(destFileName);
-                        return Path.GetFileName(found);
+                        return $"Images/{finalname}";
                     }
                 }
                 File.Copy(found, destFileName);
-                return Path.GetFileName(found);
+                return $"Images/{finalname}";
             }
             Console.WriteLine($"Couldn't find {image_id}!");
             return "";
+        }
+
+        static string CleanInput(string strIn)
+        {
+            // Replace invalid characters with empty strings.
+            try
+            {
+                return Regex.Replace(strIn, @"[^\w\.@-]", "",
+                                     RegexOptions.None, TimeSpan.FromSeconds(1.5));
+            }
+            // If we timeout when replacing invalid characters, 
+            // we should return Empty.
+            catch (RegexMatchTimeoutException)
+            {
+                return String.Empty;
+            }
         }
     }
 }
