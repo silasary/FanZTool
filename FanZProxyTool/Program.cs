@@ -27,6 +27,8 @@ namespace FanZProxyTool
             {
                 PrintDeck(deck);
             }
+            Console.WriteLine("Done.");
+            Console.ReadKey();
         }
 
         private static void PrintDeck(string path)
@@ -56,8 +58,7 @@ namespace FanZProxyTool
 
         private static string CopyFile(string gameid, string image_id, string name)
         {
-            name = CleanInput(name);
-            string searchPattern = $"{image_id}_{name}.*";
+            string searchPattern = $"{image_id}.*";
             var imagedir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "OCTGN", "ImageDatabase", gameid, "Sets");
             var search = Directory.GetFiles("Export", searchPattern, SearchOption.AllDirectories);
             string found = search.SingleOrDefault();
@@ -65,18 +66,19 @@ namespace FanZProxyTool
             {
                 return $"Images/{Path.GetFileName(found)}";
             }
-            search = Directory.GetFiles(imagedir, $"{image_id}.*", SearchOption.AllDirectories);
+            search = Directory.GetFiles(imagedir, searchPattern, SearchOption.AllDirectories);
             try
             {
                 found = search.SingleOrDefault();
             }
             catch (InvalidOperationException)
             {
-                found = CollisionForm.Resolve(search, name);
+                Console.WriteLine($"Collision on {image_id}: {name}");
+                found = CollisionForm.Resolve(search, name, image_id);
             }
             if (found != null)
             {
-                string finalname = $"{image_id}_{name}" + Path.GetExtension(found);
+                string finalname = $"{image_id}" + Path.GetExtension(found);
                 string destFileName = Path.Combine("Export", "Images", finalname);
                 using (var bitmap = Image.FromFile(found))
                 {
@@ -106,7 +108,7 @@ namespace FanZProxyTool
             // we should return Empty.
             catch (RegexMatchTimeoutException)
             {
-                return String.Empty;
+                return string.Empty;
             }
         }
     }
